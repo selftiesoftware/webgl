@@ -11,6 +11,9 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Time exposing (Time)
 import WebGL exposing (Mesh, Shader, Entity)
+import Platform.Sub
+import Keyboard
+import Keyboard.Key exposing (..)
 import Window
 import Task
 
@@ -23,6 +26,7 @@ type alias Model =
 type Msg =
     Resize Window.Size
   | Tick Float
+  | Move Vec3
 
 type alias Person =
     { position : Vec3 }
@@ -30,18 +34,32 @@ type alias Person =
 main : Program Never Model Msg
 main =
     Html.program
-        { init = ( { window = (Window.Size 0 0), time = 0, person = Person (vec3 0 0 -4)}, Task.perform Resize Window.size )
+        { init = ( { window = (Window.Size 0 0), time = 0, person = Person (vec3 0 0 -5)}, Task.perform Resize Window.size )
         , view = view
-        , subscriptions = (\model -> AnimationFrame.diffs Tick)
+        , subscriptions = subscriptions
         , update = update
         }
+
+subscriptions : Model -> Sub Msg
+subscriptions model = Sub.batch
+  [ AnimationFrame.diffs Tick
+  , Keyboard.presses keyPress
+  ]
+
+keyPress : Keyboard.KeyCode -> Msg
+keyPress code =
+  case (Keyboard.Key.fromCode code) of
+    Up -> Move (vec3 0 0 1)
+    Down -> Move (vec3 0 0 -1)
+    e -> Move (vec3 0 0 0)
+
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Tick elapsed -> ( { model | time = model.time + elapsed}, Cmd.none )
+    Move v -> { model | person = Person (Vec3.add model.person.position v) } ! []
     Resize newSize -> { model | window = newSize } ! []
-
 view : Model -> Html msg
 view model =
     WebGL.toHtml
